@@ -101,7 +101,7 @@ pip install -r requirements.txt
 alembic upgrade head
 
 # Provision initial administrator account
-python -m app.cli.create_admin --email admin@skillbridge.ai --password "AdminSecretPass2026!" --name "Lead Administrator"
+python -m app.cli.create_admin --email admin@skillbridge.ai --password "<YOUR_ADMIN_PASSWORD>" --name "Lead Administrator"
 
 # Start the FastAPI server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -120,7 +120,7 @@ cd c:\nagmamobileApp\admin_dashboard
 flutter pub get
 flutter run -d chrome --web-port=3000
 ```
-Login with `admin@skillbridge.ai` and `AdminSecretPass2026!`.
+**Admin Login:** Use the administrator credentials configured for your local development environment. Never commit real passwords or API keys to GitHub.
 
 ---
 
