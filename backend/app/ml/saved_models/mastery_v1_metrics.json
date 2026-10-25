@@ -1,0 +1,30 @@
+{
+  "model_version": "v1.0.0",
+  "algorithm": "logistic_regression",
+  "trained_at": "2026-10-25T06:06:15.420302",
+  "training_samples": 80,
+  "test_samples": 20,
+  "data_source": "synthetic_learner_dataset_v1",
+  "baseline_metrics": {
+    "accuracy": 0.8,
+    "precision": 0.8,
+    "recall": 1.0,
+    "f1": 0.8889,
+    "roc_auc": 0.5
+  },
+  "evaluation_metrics": {
+    "accuracy": 0.95,
+    "precision": 0.9412,
+    "recall": 1.0,
+    "f1": 0.9697,
+    "roc_auc": 0.8281
+  },
+  "features": [
+    "historical_accuracy",
+    "prior_attempts_count",
+    "avg_time_per_question_sec",
+    "prerequisite_mastery_avg",
+    "difficulty_level",
+    "consecutive_error_streak"
+  ]
+}

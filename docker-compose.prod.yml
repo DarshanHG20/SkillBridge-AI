@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # SkillBridge AI Backend Service
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    env_file:
+      - ./backend/.env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # Production MySQL 8.0 Instance
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-ChangeRootSecretPass123!}
+      MYSQL_DATABASE: skillbridge_prod
+      MYSQL_USER: skillbridge_user
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-ChangeUserSecretPass123!}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "127.0.0.1:3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-ChangeRootSecretPass123!}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  app_storage:
+  mysql_data:
