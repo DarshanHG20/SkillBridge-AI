@@ -19,3 +19,28 @@ admin_dashboard/.dart_tool/
 mobile_app/assets/icon/app-release.apk
 
 mobile_app/assets/icon/app-release.apk
+
+# IDE settings
+.idea/
+
+# Node.js dependencies
+**/node_modules/
+
+# Build outputs
+**/dist/
+**/build/
+**/.dart_tool/
+
+# Flutter generated files
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+
+# Test and coverage outputs
+**/coverage/
+**/.nyc_output/
+
+# Logs and temporary files
+*.log
+.DS_Store
+Thumbs.db

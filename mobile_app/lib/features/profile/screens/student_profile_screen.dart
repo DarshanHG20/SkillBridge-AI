@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/token_storage.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_text_field.dart';
 
 /// Student profile view and edit screen communicating with /api/v1/users/me and /profile.
 class StudentProfileScreen extends StatefulWidget {
-  const StudentProfileScreen({super.key});
+  final ApiClient? apiClient;
+  final TokenStorage? tokenStorage;
+
+  const StudentProfileScreen({super.key, this.apiClient, this.tokenStorage});
 
   @override
   State<StudentProfileScreen> createState() => _StudentProfileScreenState();
@@ -15,8 +19,8 @@ class StudentProfileScreen extends StatefulWidget {
 
 class _StudentProfileScreenState extends State<StudentProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _apiClient = ApiClient();
-  final _tokenStorage = TokenStorage();
+  late final ApiClient _apiClient;
+  late final TokenStorage _tokenStorage;
 
   late TextEditingController _nameController;
   late TextEditingController _headlineController;
@@ -24,27 +28,83 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   late TextEditingController _targetRoleController;
   late TextEditingController _hoursController;
 
-  bool _isLoading = false;
+  bool _isInitialLoading = true;
+  bool _isSaving = false;
+  String? _loadError;
   String _learningStyle = 'visual';
+
+  static const List<Map<String, String>> _styleOptions = [
+    {'value': 'visual', 'label': 'Visual & Diagrams'},
+    {'value': 'interactive', 'label': 'Interactive Code & Quizzes'},
+    {'value': 'hands_on', 'label': 'Hands-on Projects & Practice'},
+    {'value': 'reading', 'label': 'Documentation & Articles'},
+    {'value': 'auditory', 'label': 'Lectures & Discussions'},
+  ];
 
   @override
   void initState() {
     super.initState();
-    final user = _tokenStorage.currentUser;
-    final profile = user?['profile'] as Map<String, dynamic>?;
+    _apiClient = widget.apiClient ?? ApiClient();
+    _tokenStorage = widget.tokenStorage ?? TokenStorage();
+    _initializeControllers();
+    _loadProfileFromBackend();
+  }
 
-    _nameController = TextEditingController(text: user?['full_name'] ?? '');
-    _headlineController = TextEditingController(
-      text: profile?['headline'] ?? '',
-    );
-    _bioController = TextEditingController(text: profile?['bio'] ?? '');
+  void _initializeControllers() {
+    final cached = _tokenStorage.currentUser;
+    final profile = cached?['profile'] is Map ? cached!['profile'] as Map<String, dynamic> : null;
+
+    _nameController = TextEditingController(text: cached?['full_name'] as String? ?? '');
+    _headlineController = TextEditingController(text: profile?['headline'] as String? ?? '');
+    _bioController = TextEditingController(text: profile?['bio'] as String? ?? '');
     _targetRoleController = TextEditingController(
-      text: profile?['target_role'] ?? 'Software Engineer',
+      text: profile?['target_role'] as String? ?? 'Software Engineer',
     );
     _hoursController = TextEditingController(
       text: profile?['target_hours_per_week']?.toString() ?? '10',
     );
-    _learningStyle = profile?['preferred_learning_style'] ?? 'visual';
+    _setSafeLearningStyle(profile?['preferred_learning_style'] as String?);
+  }
+
+  void _setSafeLearningStyle(String? rawStyle) {
+    if (rawStyle == null) {
+      _learningStyle = 'visual';
+      return;
+    }
+    final match = _styleOptions.any((opt) => opt['value'] == rawStyle);
+    _learningStyle = match ? rawStyle : 'visual';
+  }
+
+  void _populateFromUser(Map<String, dynamic> user) {
+    final profile = user['profile'] is Map ? user['profile'] as Map<String, dynamic> : null;
+    _nameController.text = user['full_name'] as String? ?? '';
+    _headlineController.text = profile?['headline'] as String? ?? '';
+    _bioController.text = profile?['bio'] as String? ?? '';
+    _targetRoleController.text = profile?['target_role'] as String? ?? 'Software Engineer';
+    _hoursController.text = (profile?['target_hours_per_week']?.toString()) ?? '10';
+    _setSafeLearningStyle(profile?['preferred_learning_style'] as String?);
+  }
+
+  Future<void> _loadProfileFromBackend() async {
+    setState(() {
+      _isInitialLoading = true;
+      _loadError = null;
+    });
+
+    try {
+      final user = await _apiClient.getProfile();
+      if (!mounted) return;
+      setState(() {
+        _populateFromUser(user);
+        _isInitialLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = e.toString();
+        _isInitialLoading = false;
+      });
+    }
   }
 
   @override
@@ -54,15 +114,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     _bioController.dispose();
     _targetRoleController.dispose();
     _hoursController.dispose();
-    _apiClient.dispose();
+    if (widget.apiClient == null) {
+      _apiClient.dispose();
+    }
     super.dispose();
   }
 
   Future<void> _handleSave() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
-      _isLoading = true;
+      _isSaving = true;
     });
 
     try {
@@ -81,25 +144,35 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully!')),
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: AppColors.success,
+          ),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.message}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update profile.')),
+          const SnackBar(
+            content: Text('Failed to update profile. Please try again.'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isSaving = false;
         });
       }
     }
@@ -109,13 +182,78 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Student Profile')),
-      body: SingleChildScrollView(
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isInitialLoading && _tokenStorage.currentUser == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_loadError != null && _tokenStorage.currentUser == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.cloud_off, size: 48, color: AppColors.error),
+              const SizedBox(height: 16),
+              Text(
+                'Unable to load profile:\n$_loadError',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.error),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                onPressed: _loadProfileFromBackend,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadProfileFromBackend,
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (_isInitialLoading)
+                const LinearProgressIndicator(minHeight: 2),
+              if (_loadError != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.warning),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber, color: AppColors.warning),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Showing offline data. Tap to retry loading latest profile.',
+                          style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh, size: 18),
+                        onPressed: _loadProfileFromBackend,
+                      ),
+                    ],
+                  ),
+                ),
               AppTextField(
                 controller: _nameController,
                 label: 'Full Name',
@@ -178,20 +316,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     vertical: 12,
                   ),
                 ),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'visual',
-                    child: Text('Visual & Diagrams'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'interactive',
-                    child: Text('Interactive Code & Quizzes'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'reading',
-                    child: Text('Documentation & Articles'),
-                  ),
-                ],
+                items: _styleOptions.map((opt) {
+                  return DropdownMenuItem<String>(
+                    value: opt['value'],
+                    child: Text(opt['label']!),
+                  );
+                }).toList(),
                 onChanged: (v) {
                   if (v != null) setState(() => _learningStyle = v);
                 },
@@ -199,8 +329,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
               const SizedBox(height: 28),
               AppButton(
                 label: 'Save Changes',
-                isLoading: _isLoading,
-                onPressed: _handleSave,
+                isLoading: _isSaving,
+                onPressed: _isSaving ? null : _handleSave,
               ),
             ],
           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../shared/widgets/app_button.dart';
@@ -21,6 +22,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool? _isConnected;
   String _serverInfo = 'Checking server connectivity...';
 
+  int _unreadNotifs = 0;
+
   @override
   void initState() {
     super.initState();
@@ -34,16 +37,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final res = await _apiClient.checkHealth();
-      setState(() {
-        _isConnected = res['status'] == 'healthy';
-        _serverInfo =
-            'Backend v${res['version']} (${res['environment']}) - DB: ${res['database_connected'] ? "Online" : "Offline"}';
-      });
+      int unread = 0;
+      try {
+        unread = await _apiClient.getUnreadNotificationCount();
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() {
+          _isConnected = res['status'] == 'healthy';
+          _serverInfo =
+              'Backend v${res['version']} (${res['environment']}) - DB: ${res['database_connected'] ? "Online" : "Offline"}';
+          _unreadNotifs = unread;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isConnected = false;
-        _serverInfo = 'Unable to reach backend: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _isConnected = false;
+          _serverInfo = 'Unable to reach backend: $e';
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -81,9 +94,22 @@ class _HomeScreenState extends State<HomeScreen> {
             const Text(AppConfig.appName),
           ],
         ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16),
+        actions: [
+          IconButton(
+            tooltip: 'Notifications',
+            icon: Badge(
+              isLabelVisible: _unreadNotifs > 0,
+              label: Text('$_unreadNotifs'),
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            onPressed: () {
+              Navigator.pushNamed(context, AppRouter.notifications).then((_) {
+                _checkServer();
+              });
+            },
+          ),
+          const Padding(
+            padding: EdgeInsets.only(right: 12),
             child: Center(
               child: StatusBadge(
                 label: AppConfig.environment,

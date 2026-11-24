@@ -19,6 +19,10 @@ class ApiConstants {
   static const String skills = '/skills';
   static const String skillsTaxonomyTree = '/skills/taxonomy/tree';
   static const String skillsMyMastery = '/skills/my-mastery';
+  static const String skillsUnlockAll100 = '/skills/unlock-all-100';
+
+  // Courses & Lessons
+  static const String courses = '/courses';
 
   // Assessments
   static const String assessments = '/assessments';
@@ -53,6 +57,11 @@ class ApiConstants {
 
   // Part 5: Student Feedback & Bug Reporting
   static const String feedback = '/feedback';
+
+  // Notifications
+  static const String notifications = '/notifications';
+  static const String notificationsUnreadCount = '/notifications/unread-count';
+  static const String notificationsReadAll = '/notifications/read-all';
 
   static const Map<String, String> defaultHeaders = {
     'Content-Type': 'application/json',

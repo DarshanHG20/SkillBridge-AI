@@ -67,8 +67,17 @@ class _ProjectCatalogTabState extends State<ProjectCatalogTab> {
 
   void _openProgressModal(Map<String, dynamic> project) {
     double progressVal =
-        (project['current_completion'] as num?)?.toDouble() ?? 0.0;
-    String status = project['current_status'] as String? ?? 'in_progress';
+        ((project['completion_percentage'] ?? project['current_completion'])
+                as num?)
+            ?.toDouble()
+            .clamp(0.0, 100.0) ??
+        0.0;
+    final rawStatus =
+        (project['user_status'] ?? project['current_status']) as String?;
+    const allowedStatuses = {'in_progress', 'submitted', 'completed'};
+    String status = allowedStatuses.contains(rawStatus)
+        ? rawStatus!
+        : 'in_progress';
     final notesController = TextEditingController();
 
     showModalBottomSheet(
@@ -310,12 +319,24 @@ class _ProjectCatalogTabState extends State<ProjectCatalogTab> {
                       final difficulty =
                           p['difficulty'] as String? ?? 'intermediate';
                       final milestones = (p['milestones_json'] as List?) ?? [];
-                      final rubric =
-                          p['rubric_json'] as Map<String, dynamic>? ?? {};
-                      final isEnrolled = p['is_enrolled'] as bool? ?? false;
+                      final rawRubric = p['rubric_json'];
+                      final rubric = rawRubric is Map<String, dynamic>
+                          ? rawRubric
+                          : (rawRubric is Map
+                              ? Map<String, dynamic>.from(rawRubric)
+                              : <String, dynamic>{});
+                      final rawStatus =
+                          (p['user_status'] ?? p['current_status']) as String?;
+                      final isEnrolled =
+                          (p['is_enrolled'] as bool?) ??
+                          (rawStatus != null && rawStatus.isNotEmpty);
                       final completion =
-                          (p['current_completion'] as num?)?.toDouble() ?? 0.0;
-                      final status = p['current_status'] as String? ?? '';
+                          ((p['completion_percentage'] ??
+                                      p['current_completion'])
+                                  as num?)
+                              ?.toDouble() ??
+                          0.0;
+                      final status = rawStatus ?? '';
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 16),

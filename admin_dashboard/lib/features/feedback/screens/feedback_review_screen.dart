@@ -282,10 +282,11 @@ class _FeedbackReviewScreenState extends State<FeedbackReviewScreen> {
                             item['category'] as String? ?? 'general';
 
                         Color statusColor = AdminColors.warning;
-                        if (status == 'resolved')
+                        if (status == 'resolved') {
                           statusColor = AdminColors.success;
-                        if (status == 'reviewed')
+                        } else if (status == 'reviewed') {
                           statusColor = AdminColors.secondary;
+                        }
 
                         return Card(
                           elevation: 0,

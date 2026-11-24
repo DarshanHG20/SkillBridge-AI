@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 
 import '../../../core/config/app_config.dart';
@@ -19,14 +21,37 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _apiClient = ApiClient();
   final _tokenStorage = TokenStorage();
+  final _serverUrlController = TextEditingController(
+    text: AppConfig.effectiveBaseUrl,
+  );
 
   bool _isPinging = false;
   String? _pingResult;
 
   @override
   void dispose() {
+    _serverUrlController.dispose();
     _apiClient.dispose();
     super.dispose();
+  }
+
+  void _applyServerUrl() {
+    final val = _serverUrlController.text.trim();
+    AppConfig.setRuntimeBaseUrl(val);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('API endpoint updated to ${AppConfig.effectiveBaseUrl}'),
+      ),
+    );
+    _testConnection();
+  }
+
+  String get _platformName {
+    if (kIsWeb) return 'Web Browser';
+    if (defaultTargetPlatform == TargetPlatform.android) return 'Android Device / Emulator';
+    if (defaultTargetPlatform == TargetPlatform.iOS) return 'iOS Device';
+    if (defaultTargetPlatform == TargetPlatform.windows) return 'Windows Desktop';
+    return defaultTargetPlatform.name;
   }
 
   Future<void> _testConnection() async {
@@ -35,15 +60,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _pingResult = null;
     });
 
+    final stopwatch = Stopwatch()..start();
     try {
       final res = await _apiClient.checkHealth();
+      stopwatch.stop();
+      final ms = stopwatch.elapsedMilliseconds;
+      final dbConnected = res['database_connected'] == true;
       setState(() {
         _pingResult =
-            'Connection OK: ${res['project_name']} (DB: ${res['database_connected'] ? "Online" : "Offline"})';
+            '✅ Connection OK (${ms}ms)\nServer: ${res['project_name']} v${res['version'] ?? '1.0'}\nDatabase: ${dbConnected ? "MongoDB Connected" : "MongoDB Offline"}';
       });
     } catch (e) {
+      stopwatch.stop();
       setState(() {
-        _pingResult = 'Failed: $e';
+        _pingResult =
+            '❌ Connection Failed (${stopwatch.elapsedMilliseconds}ms)\n$e\n\nTroubleshooting:\n1. Verify backend is running (`cd backend-node; npm start`)\n2. On physical Android phone, use computer LAN IP in override field above.';
       });
     } finally {
       if (mounted) {
@@ -144,10 +175,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 12),
+                  _buildSettingRow('Target Platform', _platformName),
+                  const Divider(height: 16),
                   _buildSettingRow('Environment', AppConfig.environment),
                   const Divider(height: 16),
-                  _buildSettingRow('API Base URL', AppConfig.apiBaseUrl),
-                  const SizedBox(height: 16),
+                  _buildSettingRow('Active API URL', AppConfig.effectiveBaseUrl),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _serverUrlController,
+                    decoration: InputDecoration(
+                      labelText: 'Override API Base URL (e.g. LAN IP for device)',
+                      border: const OutlineInputBorder(),
+                      isDense: true,
+                      suffixIcon: IconButton(
+                        tooltip: 'Apply & Test',
+                        icon: const Icon(Icons.check_circle_outline),
+                        onPressed: _applyServerUrl,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   if (_pingResult != null) ...[
                     Text(
                       _pingResult!,

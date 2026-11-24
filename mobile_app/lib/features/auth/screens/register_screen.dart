@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -67,8 +68,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
+        String msg = e.message;
+        if (e.statusCode == 404 || msg.contains('404')) {
+          msg = 'Backend endpoint not found (HTTP 404).\n\nPlease make sure:\n1. Backend is running (`cd backend-node; npm start`)\n2. Base URL is correct (${AppConfig.effectiveBaseUrl})';
+        }
         setState(() {
-          _errorMessage = e.message;
+          _errorMessage = msg;
         });
       }
     } catch (e) {

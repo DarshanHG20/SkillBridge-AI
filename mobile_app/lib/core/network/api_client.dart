@@ -21,12 +21,14 @@ class ApiException implements Exception {
 /// Decoupled HTTP API client handling base URLs, bearer token injection, timeouts, and JSON parsing.
 class ApiClient {
   final http.Client _client;
-  final String _baseUrl;
+  final String? _customBaseUrl;
   final TokenStorage _tokenStorage;
+
+  String get _baseUrl => _customBaseUrl ?? AppConfig.effectiveBaseUrl;
 
   ApiClient({http.Client? client, String? baseUrl, TokenStorage? tokenStorage})
     : _client = client ?? http.Client(),
-      _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
+      _customBaseUrl = baseUrl,
       _tokenStorage = tokenStorage ?? TokenStorage();
 
   Map<String, String> _buildHeaders() {
@@ -215,6 +217,19 @@ class ApiClient {
           .get(uri, headers: _buildHeaders())
           .timeout(AppConfig.timeout);
       return (_processResponse(response) as List).cast<dynamic>();
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Bulk unlock all skills and set 100% mastery & course completion for caller.
+  Future<Map<String, dynamic>> unlockAndMasterAll100() async {
+    final uri = Uri.parse('$_baseUrl${ApiConstants.skillsUnlockAll100}');
+    try {
+      final response = await _client
+          .post(uri, headers: _buildHeaders())
+          .timeout(AppConfig.timeout);
+      return _processResponse(response) as Map<String, dynamic>;
     } catch (e) {
       throw _handleError(e);
     }
@@ -708,25 +723,178 @@ class ApiClient {
     }
   }
 
+  // --- Courses, Modules & Lessons ---
+
+  /// List all learning courses with current user's unlock and progress state.
+  Future<List<dynamic>> getCourses({String? category}) async {
+    final query = (category != null && category.isNotEmpty && category != 'All')
+        ? '?category=${Uri.encodeQueryComponent(category)}'
+        : '';
+    final uri = Uri.parse('$_baseUrl${ApiConstants.courses}$query');
+    try {
+      final response = await _client
+          .get(uri, headers: _buildHeaders())
+          .timeout(AppConfig.timeout);
+      return (_processResponse(response) as List).cast<dynamic>();
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Fetch full details, modules, and lessons for a course by ID or slug.
+  Future<Map<String, dynamic>> getCourseDetail(dynamic courseIdOrSlug) async {
+    final uri = Uri.parse('$_baseUrl${ApiConstants.courses}/$courseIdOrSlug');
+    try {
+      final response = await _client
+          .get(uri, headers: _buildHeaders())
+          .timeout(AppConfig.timeout);
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Explicitly enroll/start a learning course for the logged-in user.
+  Future<Map<String, dynamic>> enrollInCourse(dynamic courseIdOrSlug) async {
+    final uri = Uri.parse(
+      '$_baseUrl${ApiConstants.courses}/$courseIdOrSlug/enroll',
+    );
+    try {
+      final response = await _client
+          .post(uri, headers: _buildHeaders())
+          .timeout(AppConfig.timeout);
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Mark a course lesson completed or incomplete and persist completion percentage.
+  Future<Map<String, dynamic>> completeLesson(
+    dynamic courseIdOrSlug,
+    String lessonId, {
+    bool completed = true,
+  }) async {
+    final uri = Uri.parse(
+      '$_baseUrl${ApiConstants.courses}/$courseIdOrSlug/lessons/$lessonId/complete',
+    );
+    try {
+      final response = await _client
+          .post(
+            uri,
+            headers: _buildHeaders(),
+            body: jsonEncode({'completed': completed}),
+          )
+          .timeout(AppConfig.timeout);
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // --- Notifications ---
+
+  /// Retrieve paginated notifications list and unread count.
+  Future<Map<String, dynamic>> getNotifications({int skip = 0, int limit = 20}) async {
+    final uri = Uri.parse('$_baseUrl${ApiConstants.notifications}?skip=$skip&limit=$limit');
+    try {
+      final response = await _client
+          .get(uri, headers: _buildHeaders())
+          .timeout(AppConfig.timeout);
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Retrieve unread notification count.
+  Future<int> getUnreadNotificationCount() async {
+    final uri = Uri.parse('$_baseUrl${ApiConstants.notificationsUnreadCount}');
+    try {
+      final response = await _client
+          .get(uri, headers: _buildHeaders())
+          .timeout(AppConfig.timeout);
+      final data = _processResponse(response) as Map<String, dynamic>;
+      return (data['unread_count'] as num?)?.toInt() ?? 0;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Mark single notification as read.
+  Future<Map<String, dynamic>> markNotificationAsRead(int notificationId) async {
+    final uri = Uri.parse('$_baseUrl${ApiConstants.notifications}/$notificationId/read');
+    try {
+      final response = await _client
+          .patch(uri, headers: _buildHeaders())
+          .timeout(AppConfig.timeout);
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Mark all notifications as read.
+  Future<Map<String, dynamic>> markAllNotificationsAsRead() async {
+    final uri = Uri.parse('$_baseUrl${ApiConstants.notificationsReadAll}');
+    try {
+      final response = await _client
+          .patch(uri, headers: _buildHeaders())
+          .timeout(AppConfig.timeout);
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Delete notification by ID.
+  Future<Map<String, dynamic>> deleteNotification(int notificationId) async {
+    final uri = Uri.parse('$_baseUrl${ApiConstants.notifications}/$notificationId');
+    try {
+      final response = await _client
+          .delete(uri, headers: _buildHeaders())
+          .timeout(AppConfig.timeout);
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   dynamic _processResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return null;
       return jsonDecode(response.body);
     } else {
-      String errorMessage = 'Request failed with status ${response.statusCode}';
+      if (response.statusCode == 401) {
+        _tokenStorage.clearSession();
+      }
+      String? errorMessage;
       try {
         final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic> && decoded.containsKey('detail')) {
-          final detail = decoded['detail'];
-          if (detail is String) {
-            errorMessage = detail;
-          } else if (detail is List && detail.isNotEmpty) {
-            errorMessage = detail
-                .map((e) => e['msg'] ?? e.toString())
-                .join(', ');
+        if (decoded is Map<String, dynamic>) {
+          if (decoded.containsKey('detail')) {
+            final detail = decoded['detail'];
+            if (detail is String) {
+              errorMessage = detail;
+            } else if (detail is List && detail.isNotEmpty) {
+              errorMessage = detail
+                  .map((e) => e['msg'] ?? e.toString())
+                  .join(', ');
+            }
+          } else if (decoded.containsKey('message')) {
+            errorMessage = decoded['message'].toString();
+          } else if (decoded.containsKey('error')) {
+            errorMessage = decoded['error'].toString();
           }
         }
       } catch (_) {}
+
+      errorMessage ??= (response.statusCode == 404)
+          ? 'Endpoint not found (HTTP 404). Please ensure SkillBridge AI backend is running and URL is correct.'
+          : (response.statusCode >= 500)
+              ? 'Server error (HTTP ${response.statusCode}). Please check backend service status.'
+              : 'Request failed with status ${response.statusCode}';
+
       throw ApiException(errorMessage, response.statusCode);
     }
   }
@@ -735,11 +903,11 @@ class ApiClient {
     if (error is ApiException) return error;
     if (error is TimeoutException) {
       return ApiException(
-        'Network request timed out. Please check your connection.',
+        'Network request timed out.\n\nPlease check:\n1. Backend server is running (`npm start` in backend-node)\n2. Emulator/Device network connection',
       );
     }
     return ApiException(
-      'Network error: Unable to reach SkillBridge AI server.',
+      'Network error: Unable to reach SkillBridge AI server at ${AppConfig.effectiveBaseUrl}.\n\nIf using Android Emulator, ensure backend is running on port 5001.',
     );
   }
 

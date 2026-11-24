@@ -509,10 +509,14 @@ class _CodingPracticeScreenState extends State<CodingPracticeScreen> {
     IconData badgeIcon = Icons.check_circle;
     String statusTitle = 'All Test Cases Passed!';
 
-    if (status == 'security_violation') {
+    if (status == 'security_violation' || status == 'security_blocked') {
       badgeColor = AppColors.error;
       badgeIcon = Icons.security;
       statusTitle = 'Security Policy Violation Flagged';
+    } else if (status == 'time_limit_exceeded') {
+      badgeColor = AppColors.error;
+      badgeIcon = Icons.timer_off;
+      statusTitle = 'Execution Time Limit Exceeded';
     } else if (status == 'syntax_error') {
       badgeColor = AppColors.error;
       badgeIcon = Icons.bug_report;
@@ -555,7 +559,7 @@ class _CodingPracticeScreenState extends State<CodingPracticeScreen> {
                 ),
               ],
             ),
-            if (feedback['error_message'] != null) ...[
+            if ((feedback['error_message'] ?? feedback['error']) != null) ...[
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
@@ -565,7 +569,7 @@ class _CodingPracticeScreenState extends State<CodingPracticeScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  feedback['error_message'].toString(),
+                  (feedback['error_message'] ?? feedback['error']).toString(),
                   style: const TextStyle(
                     color: AppColors.error,
                     fontSize: 12,
@@ -581,42 +585,53 @@ class _CodingPracticeScreenState extends State<CodingPracticeScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               ),
               const SizedBox(height: 6),
-              for (final tr in testResults)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 6),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: tr['passed'] == true
-                          ? const Color(0x4010B981)
-                          : const Color(0x40EF4444),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        tr['passed'] == true
-                            ? Icons.check_circle
-                            : Icons.cancel,
-                        size: 16,
-                        color: tr['passed'] == true
-                            ? AppColors.success
-                            : AppColors.error,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Test #${tr['test_index']}: Input: ${tr['input']} | Expected: ${tr['expected_output']} | Actual: ${tr['actual_output']}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontFamily: 'monospace',
-                          ),
+              for (int idx = 0; idx < testResults.length; idx++)
+                Builder(
+                  builder: (context) {
+                    final tr = testResults[idx] as Map<String, dynamic>;
+                    final casePassed = (tr['is_passed'] ?? tr['passed']) == true;
+                    final isHidden = tr['is_hidden'] == true;
+                    final testLabel = tr['test_index'] ?? (idx + 1);
+                    final exp = isHidden
+                        ? '[Hidden]'
+                        : (tr['expected_output'] ?? tr['expected'] ?? '');
+                    final act = tr['actual_output'] ?? tr['actual'] ?? '';
+                    final inp = isHidden ? '[Hidden]' : (tr['input'] ?? '');
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: casePassed
+                              ? const Color(0x4010B981)
+                              : const Color(0x40EF4444),
                         ),
                       ),
-                    ],
-                  ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            casePassed ? Icons.check_circle : Icons.cancel,
+                            size: 16,
+                            color:
+                                casePassed ? AppColors.success : AppColors.error,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Test #$testLabel: Input: $inp | Expected: $exp | Actual: $act',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
             ],
           ],
@@ -677,7 +692,7 @@ class _CodingPracticeScreenState extends State<CodingPracticeScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Action: ${rec['action']}',
+                      'Action: ${rec['action'] ?? rec['recommended_action'] ?? 'Practice related problem hints'}',
                       style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,

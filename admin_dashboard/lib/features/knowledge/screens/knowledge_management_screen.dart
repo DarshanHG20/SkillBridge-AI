@@ -47,7 +47,7 @@ class _KnowledgeManagementScreenState extends State<KnowledgeManagementScreen> {
 
     try {
       final status = await _apiClient.getTutorStatus();
-      final docs = await _apiClient.listDocuments();
+      final docs = await _apiClient.listAllAdminDocuments();
 
       if (!mounted) return;
       setState(() {
@@ -91,6 +91,28 @@ class _KnowledgeManagementScreenState extends State<KnowledgeManagementScreen> {
           _isRebuilding = false;
         });
       }
+    }
+  }
+
+  Future<void> _toggleDocApproval(int docId, bool approve) async {
+    try {
+      await _apiClient.setDocumentApproval(docId, approve);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            approve
+                ? 'Document approved for AI Tutor RAG retrieval.'
+                : 'Document approval revoked.',
+          ),
+        ),
+      );
+      _loadData();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Approval update failed: $e')),
+      );
     }
   }
 
@@ -328,11 +350,12 @@ class _KnowledgeManagementScreenState extends State<KnowledgeManagementScreen> {
             else
               Table(
                 columnWidths: const {
-                  0: FlexColumnWidth(3),
-                  1: FlexColumnWidth(2),
-                  2: FlexColumnWidth(1),
-                  3: FlexColumnWidth(1),
-                  4: FlexColumnWidth(1),
+                  0: FlexColumnWidth(2.6),
+                  1: FlexColumnWidth(1.8),
+                  2: FlexColumnWidth(0.9),
+                  3: FlexColumnWidth(0.8),
+                  4: FlexColumnWidth(1.0),
+                  5: FlexColumnWidth(1.3),
                 },
                 children: [
                   TableRow(
@@ -342,6 +365,7 @@ class _KnowledgeManagementScreenState extends State<KnowledgeManagementScreen> {
                       _th('Filename'),
                       _th('Size'),
                       _th('Chunks'),
+                      _th('Status'),
                       _th('Actions'),
                     ],
                   ),
@@ -355,15 +379,53 @@ class _KnowledgeManagementScreenState extends State<KnowledgeManagementScreen> {
                         ),
                         _td('${doc['chunk_count'] ?? 0}'),
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              size: 18,
-                              color: AdminColors.error,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Text(
+                            (doc['is_approved'] == true)
+                                ? 'Approved'
+                                : 'Pending',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: (doc['is_approved'] == true)
+                                  ? AdminColors.success
+                                  : AdminColors.warning,
                             ),
-                            tooltip: 'Delete Document',
-                            onPressed: () => _deleteDocument(doc['id'] as int),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  (doc['is_approved'] == true)
+                                      ? Icons.unpublished_outlined
+                                      : Icons.verified_outlined,
+                                  size: 18,
+                                  color: (doc['is_approved'] == true)
+                                      ? AdminColors.warning
+                                      : AdminColors.success,
+                                ),
+                                tooltip: (doc['is_approved'] == true)
+                                    ? 'Revoke RAG Approval'
+                                    : 'Approve for RAG',
+                                onPressed: () => _toggleDocApproval(
+                                  doc['id'] as int,
+                                  doc['is_approved'] != true,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 18,
+                                  color: AdminColors.error,
+                                ),
+                                tooltip: 'Delete Document',
+                                onPressed: () => _deleteDocument(doc['id'] as int),
+                              ),
+                            ],
                           ),
                         ),
                       ],

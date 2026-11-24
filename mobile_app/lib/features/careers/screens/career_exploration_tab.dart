@@ -147,15 +147,25 @@ class _CareerExplorationTabState extends State<CareerExplorationTab> {
       );
     }
 
+    if (_careers.isEmpty) {
+      return const Center(child: Text('No career pathways available yet.'));
+    }
+
     final selectedCareer = _careers.firstWhere(
       (c) => c['slug'] == _selectedCareerSlug,
       orElse: () => _careers.first,
     );
 
     final readiness =
-        (_gapAnalysis?['overall_readiness_percentage'] as num?)?.toDouble() ??
+        ((_gapAnalysis?['readiness_percentage'] ??
+                    _gapAnalysis?['overall_readiness_percentage'])
+                as num?)
+            ?.toDouble() ??
         0.0;
-    final topGaps = (_gapAnalysis?['top_skill_gaps'] as List?) ?? [];
+    final topGaps =
+        ((_gapAnalysis?['skill_gaps'] ?? _gapAnalysis?['top_skill_gaps'])
+            as List?) ??
+        [];
     final strengths = (_gapAnalysis?['strengths'] as List?) ?? [];
     final disclaimer =
         _gapAnalysis?['disclaimer'] as String? ??
@@ -348,12 +358,19 @@ class _CareerExplorationTabState extends State<CareerExplorationTab> {
             )
           else
             ...topGaps.map((gap) {
-              final title = gap['skill_title'] as String? ?? '';
-              final minMastery =
-                  (gap['minimum_mastery_level'] as num?)?.toDouble() ?? 0.8;
+              final title =
+                  (gap['skill_title'] ?? gap['title'] ?? gap['skill_slug'] ?? '')
+                      as String;
+              final minMasteryRaw =
+                  ((gap['target_mastery'] ?? gap['minimum_mastery_level'])
+                          as num?)
+                      ?.toDouble() ??
+                  0.8;
+              final minMastery = minMasteryRaw > 0 ? minMasteryRaw : 0.8;
               final curMastery =
                   (gap['current_mastery'] as num?)?.toDouble() ?? 0.0;
-              final gapAmount = (gap['gap'] as num?)?.toDouble() ?? 0.0;
+              final gapAmount =
+                  ((gap['gap_score'] ?? gap['gap']) as num?)?.toDouble() ?? 0.0;
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 10),
@@ -400,7 +417,7 @@ class _CareerExplorationTabState extends State<CareerExplorationTab> {
                         children: [
                           Expanded(
                             child: LinearProgressIndicator(
-                              value: curMastery / minMastery,
+                              value: (curMastery / minMastery).clamp(0.0, 1.0),
                               minHeight: 6,
                               backgroundColor: Colors.grey.withValues(
                                 alpha: 0.2,
@@ -476,9 +493,18 @@ class _CareerExplorationTabState extends State<CareerExplorationTab> {
           if (_currentRoadmap != null) ...[
             const SizedBox(height: 16),
             ...((_currentRoadmap!['milestones'] as List?) ?? []).map((m) {
-              final period = m['period'] as String? ?? '';
-              final focus = m['focus_area'] as String? ?? '';
-              final actions = (m['action_items'] as List?) ?? [];
+              final period =
+                  (m['period'] ??
+                          (m['timeline_days'] != null
+                              ? 'Phase (${m['timeline_days']} Days)'
+                              : 'Milestone'))
+                      as String;
+              final focus = (m['focus_area'] ?? m['title'] ?? '') as String;
+              final actions =
+                  (m['action_items'] as List?) ??
+                  (m['description'] != null
+                      ? [m['description'].toString()]
+                      : []);
               final targetSkills = (m['target_skills'] as List?) ?? [];
 
               return Card(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/config/admin_config.dart';
 import '../../core/network/admin_api_client.dart';
 import '../../core/routing/admin_router.dart';
 import '../../core/storage/admin_token_storage.dart';
@@ -20,7 +21,7 @@ class AdminScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 900;
     final adminUser = AdminTokenStorage().currentAdmin;
-    final adminEmail = adminUser?['email'] as String? ?? 'admin@skillbridge.ai';
+    final adminEmail = adminUser?['email'] as String? ?? 'Administrator';
 
     return Scaffold(
       appBar: AppBar(
@@ -171,15 +172,60 @@ class AdminScaffold extends StatelessWidget {
           activeRoute == '/audit',
         ),
         const Spacer(),
-        _navItem(
-          context,
-          Icons.settings_outlined,
-          'Settings',
-          AdminRouter.dashboard,
-          false,
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            child: ListTile(
+              leading: const Icon(
+                Icons.settings_outlined,
+                color: AdminColors.sidebarText,
+                size: 20,
+              ),
+              title: const Text(
+                'Settings',
+                style: TextStyle(
+                  color: AdminColors.sidebarText,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              onTap: () => _showSettingsDialog(context),
+            ),
+          ),
         ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+
+  void _showSettingsDialog(BuildContext context) {
+    final adminUser = AdminTokenStorage().currentAdmin;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Admin Console Settings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('API Base URL: ${AdminConfig.apiBaseUrl}'),
+            const SizedBox(height: 8),
+            Text('Environment: ${AdminConfig.environment}'),
+            const SizedBox(height: 8),
+            Text('Signed-In User: ${adminUser?['email'] ?? 'Not signed in'}'),
+            const SizedBox(height: 8),
+            Text('Role: ${adminUser?['role'] ?? 'unknown'}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 

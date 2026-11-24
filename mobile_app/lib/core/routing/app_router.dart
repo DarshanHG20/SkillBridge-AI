@@ -13,6 +13,8 @@ import '../../features/assessments/screens/assessment_result_screen.dart';
 import '../../features/chat/screens/ai_tutor_chat_screen.dart';
 import '../../features/rag/screens/document_library_screen.dart';
 import '../../features/coding/screens/coding_practice_screen.dart';
+import '../../features/activities/screens/activities_screen.dart';
+import '../../features/notifications/screens/notifications_screen.dart';
 
 /// Centralized route definitions and generator for mobile application navigation.
 class AppRouter {
@@ -23,6 +25,8 @@ class AppRouter {
   static const String dashboard = '/dashboard';
   static const String profile = '/profile';
   static const String settings = '/settings';
+  static const String activities = '/activities';
+  static const String notifications = '/notifications';
   static const String assessmentQuiz = '/assessment-quiz';
   static const String assessmentResult = '/assessment-result';
   static const String aiTutor = '/ai-tutor';
@@ -64,6 +68,16 @@ class AppRouter {
       case settings:
         return MaterialPageRoute(
           builder: (_) => const SettingsScreen(),
+          settings: routeSettings,
+        );
+      case activities:
+        return MaterialPageRoute(
+          builder: (_) => const ActivitiesScreen(),
+          settings: routeSettings,
+        );
+      case notifications:
+        return MaterialPageRoute(
+          builder: (_) => const NotificationsScreen(),
           settings: routeSettings,
         );
       case assessmentQuiz:

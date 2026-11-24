@@ -15,13 +15,29 @@ class AssessmentResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = result['assessment_title'] as String? ?? 'Assessment Results';
-    final score = (result['score_achieved'] as num?)?.toDouble() ?? 0.0;
-    final isPassed = result['is_passed'] as bool? ?? false;
+    final score =
+        ((result['score_achieved'] ?? result['score']) as num?)?.toDouble() ??
+        0.0;
+    final isPassed =
+        (result['is_passed'] ?? result['passed']) as bool? ?? false;
     final earned = result['total_points_earned'] ?? 0;
     final possible = result['total_points_possible'] ?? 0;
     final feedback =
-        result['adaptive_feedback'] as String? ?? 'Assessment completed.';
-    final questionResults = (result['question_results'] as List?) ?? [];
+        (result['adaptive_feedback'] ?? result['feedback']) as String? ??
+        'Assessment completed.';
+    final questionResults =
+        ((result['question_results'] ?? result['questions_breakdown'])
+            as List?) ??
+        [];
+    final computedCorrect = questionResults
+        .where((q) => (q as Map<String, dynamic>)['is_correct'] == true)
+        .length;
+    final correctCount = (result['correct_count'] as int?) ?? computedCorrect;
+    final totalQuestions =
+        (result['total_questions'] as int?) ?? questionResults.length;
+    final incorrectCount =
+        (result['incorrect_count'] as int?) ??
+        (totalQuestions - correctCount).clamp(0, totalQuestions);
 
     final themeColor = isPassed ? AppColors.success : AppColors.warning;
 
@@ -97,6 +113,37 @@ class AssessmentResultScreen extends StatelessWidget {
                         color: AppColors.lightTextSecondary,
                       ),
                     ),
+                    if (totalQuestions > 0) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 10,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          Chip(
+                            avatar: const Icon(
+                              Icons.check_circle,
+                              size: 16,
+                              color: AppColors.success,
+                            ),
+                            label: Text('Correct: $correctCount'),
+                            backgroundColor: AppColors.success.withValues(
+                              alpha: 0.1,
+                            ),
+                          ),
+                          Chip(
+                            avatar: const Icon(
+                              Icons.cancel,
+                              size: 16,
+                              color: AppColors.error,
+                            ),
+                            label: Text('Incorrect: $incorrectCount'),
+                            backgroundColor: AppColors.error.withValues(
+                              alpha: 0.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     StatusBadge(
                       label: isPassed
@@ -172,8 +219,13 @@ class AssessmentResultScreen extends StatelessWidget {
               final isCorrect = q['is_correct'] as bool? ?? false;
               final prompt = q['prompt'] as String? ?? '';
               final learnerAns =
-                  q['learner_response_json']?.toString() ?? 'No answer';
-              final correctAns = q['correct_answer_json']?.toString() ?? '';
+                  (q['learner_response_json'] ?? q['selected_option'])
+                      ?.toString() ??
+                  'No answer';
+              final correctAns =
+                  (q['correct_answer_json'] ?? q['correct_answer'])
+                      ?.toString() ??
+                  '';
               final explanation =
                   q['explanation'] as String? ?? 'No explanation available.';
 
@@ -261,11 +313,15 @@ class AssessmentResultScreen extends StatelessWidget {
               label: 'Return to Dashboard',
               icon: Icons.dashboard,
               onPressed: () {
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  AppRouter.dashboard,
-                  (r) => false,
-                );
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context, true);
+                } else {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    AppRouter.dashboard,
+                    (r) => false,
+                  );
+                }
               },
             ),
             const SizedBox(height: 16),

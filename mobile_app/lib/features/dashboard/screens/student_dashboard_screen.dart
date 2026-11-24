@@ -4,11 +4,12 @@ import '../../../core/network/api_client.dart';
 import '../../../core/routing/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../adaptive/screens/adaptive_home_tab.dart';
+import '../../courses/screens/course_catalog_tab.dart';
 import '../../mastery/screens/skill_mastery_tab.dart';
 import '../../careers/screens/career_exploration_tab.dart';
 import '../../projects/screens/project_catalog_tab.dart';
 
-/// Main student dashboard hosting Adaptive Engine, Skill Taxonomy, Career Intelligence, and Projects.
+/// Main student dashboard hosting Learning Dashboard, Courses, Skill Mastery, Career Intelligence, and Projects.
 class StudentDashboardScreen extends StatefulWidget {
   const StudentDashboardScreen({super.key});
 
@@ -18,10 +19,12 @@ class StudentDashboardScreen extends StatefulWidget {
 
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   final _apiClient = ApiClient();
+  final ValueNotifier<int> _refreshTrigger = ValueNotifier<int>(0);
   int _currentTabIndex = 0;
 
   @override
   void dispose() {
+    _refreshTrigger.dispose();
     _apiClient.dispose();
     super.dispose();
   }
@@ -60,16 +63,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final titles = [
-      'SkillBridge Adaptive AI',
-      'Knowledge Taxonomy',
+      'SkillBridge Dashboard',
+      'Learning Courses',
+      'Skill Mastery',
       'Career Intelligence',
       'Hands-On Projects',
     ];
 
     final tabs = [
       AdaptiveHomeTab(
-        onNavigateToSkills: () => setState(() => _currentTabIndex = 1),
-        onNavigateToCareers: () => setState(() => _currentTabIndex = 2),
+        onNavigateToCourses: () => setState(() => _currentTabIndex = 1),
+        onNavigateToSkills: () => setState(() => _currentTabIndex = 2),
+        onNavigateToCareers: () => setState(() => _currentTabIndex = 3),
+        refreshTrigger: _refreshTrigger,
+      ),
+      CourseCatalogTab(
+        onProgressChanged: () => _refreshTrigger.value++,
       ),
       const SkillMasteryTab(),
       const CareerExplorationTab(),
@@ -80,6 +89,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       appBar: AppBar(
         title: Text(titles[_currentTabIndex]),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history_edu, color: AppColors.accent),
+            tooltip: 'Activities & History',
+            onPressed: () => Navigator.pushNamed(context, AppRouter.activities),
+          ),
           IconButton(
             icon: const Icon(Icons.psychology, color: AppColors.primary),
             tooltip: 'AI Tutor & Chatbot',
@@ -95,7 +109,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             icon: const Icon(Icons.more_vert),
             tooltip: 'More Options',
             onSelected: (val) {
-              if (val == 'documents') {
+              if (val == 'activities') {
+                Navigator.pushNamed(context, AppRouter.activities);
+              } else if (val == 'documents') {
                 Navigator.pushNamed(context, AppRouter.documentLibrary);
               } else if (val == 'profile') {
                 Navigator.pushNamed(context, AppRouter.profile);
@@ -106,6 +122,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'activities',
+                child: Row(
+                  children: [
+                    Icon(Icons.history_edu_outlined, size: 20),
+                    SizedBox(width: 12),
+                    Text('Learning Activities'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'documents',
                 child: Row(
@@ -158,17 +184,25 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           setState(() {
             _currentTabIndex = idx;
           });
+          if (idx == 0) {
+            _refreshTrigger.value++;
+          }
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            selectedIcon: Icon(Icons.auto_awesome),
-            label: 'Adaptive',
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: 'Dashboard',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.menu_book_outlined),
+            selectedIcon: Icon(Icons.menu_book),
+            label: 'Courses',
           ),
           NavigationDestination(
             icon: Icon(Icons.account_tree_outlined),
             selectedIcon: Icon(Icons.account_tree),
-            label: 'Taxonomy',
+            label: 'Skills',
           ),
           NavigationDestination(
             icon: Icon(Icons.rocket_launch_outlined),

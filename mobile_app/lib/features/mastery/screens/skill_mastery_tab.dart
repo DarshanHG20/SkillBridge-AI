@@ -6,7 +6,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../assessments/screens/assessment_quiz_screen.dart';
 
-/// Skill mastery dashboard supporting the 9 technical domains with DAG prerequisites and lock indicators.
+/// Skill mastery dashboard supporting the 9 technical domains with fast 100% unlock controls.
 class SkillMasteryTab extends StatefulWidget {
   const SkillMasteryTab({super.key});
 
@@ -18,6 +18,7 @@ class _SkillMasteryTabState extends State<SkillMasteryTab> {
   final _apiClient = ApiClient();
 
   bool _isLoading = true;
+  bool _isUnlockingAll = false;
   String? _errorMessage;
 
   List<dynamic> _taxonomyNodes = [];
@@ -78,11 +79,46 @@ class _SkillMasteryTabState extends State<SkillMasteryTab> {
     }
   }
 
+  Future<void> _handleUnlockAll100() async {
+    setState(() {
+      _isUnlockingAll = true;
+    });
+    try {
+      final res = await _apiClient.unlockAndMasterAll100();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              res['message'] as String? ??
+                  'All skills and courses unlocked and filled to 100%!',
+            ),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        await _fetchTaxonomy();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to unlock: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUnlockingAll = false;
+        });
+      }
+    }
+  }
+
   void _startSkillAssessment(Map<String, dynamic> skillNode) {
     final skillId = skillNode['id'] as int;
     final skillTitle = skillNode['title'] as String? ?? 'Skill Diagnostic';
 
-    // Find assessment linked to this skill
     final assessment = _assessments.firstWhere(
       (a) => a['skill_id'] == skillId,
       orElse: () => null,
@@ -144,6 +180,81 @@ class _SkillMasteryTabState extends State<SkillMasteryTab> {
 
     return Column(
       children: [
+        // Fast Unlock All & Fill 100% Action Banner
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: _isUnlockingAll ? null : _handleUnlockAll100,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.bolt, color: Colors.amber, size: 26),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Fast Unlock All & Fill 100%',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Instantly set all skills & courses to 100% Mastered',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_isUnlockingAll)
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    else
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+
         // Category Filter Chips
         SizedBox(
           height: 48,
@@ -199,21 +310,24 @@ class _SkillMasteryTabState extends State<SkillMasteryTab> {
                       final difficulty =
                           node['difficulty_level'] as String? ?? 'beginner';
                       final mastery =
-                          (node['current_mastery'] as num?)?.toDouble() ?? 0.0;
+                          ((node['current_mastery'] ?? node['mastery_score'])
+                                  as num?)
+                              ?.toDouble() ??
+                          0.0;
                       final status = node['status'] as String? ?? 'unlocked';
                       final prereqs =
                           (node['prerequisite_slugs'] as List?) ?? [];
 
-                      final isLocked = status == 'locked';
-                      final isMastered = status == 'mastered';
+                      final isMastered = status == 'mastered' || mastery >= 1.0;
 
                       BadgeStatus badgeStatus = BadgeStatus.unlocked;
-                      if (isLocked) {
-                        badgeStatus = BadgeStatus.locked;
-                      } else if (isMastered) {
+                      String badgeLabel = 'UNLOCKED';
+                      if (isMastered) {
                         badgeStatus = BadgeStatus.mastered;
-                      } else if (status == 'in_progress') {
+                        badgeLabel = 'MASTERED';
+                      } else if (status == 'in_progress' || mastery > 0) {
                         badgeStatus = BadgeStatus.inProgress;
+                        badgeLabel = 'IN PROGRESS';
                       }
 
                       return Card(
@@ -221,208 +335,187 @@ class _SkillMasteryTabState extends State<SkillMasteryTab> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                           side: BorderSide(
-                            color: isLocked
-                                ? Colors.grey.withValues(alpha: 0.2)
-                                : isMastered
+                            color: isMastered
                                 ? AppColors.success.withValues(alpha: 0.4)
                                 : AppColors.primary.withValues(alpha: 0.2),
                           ),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: isLocked
-                                        ? Colors.grey.withValues(alpha: 0.2)
-                                        : AppColors.primary.withValues(
-                                            alpha: 0.1,
-                                          ),
-                                    child: Icon(
-                                      isLocked
-                                          ? Icons.lock
-                                          : isMastered
-                                          ? Icons.verified
-                                          : Icons.code,
-                                      color: isLocked
-                                          ? Colors.grey
-                                          : isMastered
-                                          ? AppColors.success
-                                          : AppColors.primary,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          title,
-                                          style: AppTypography.titleMedium
-                                              .copyWith(
-                                                color: isLocked
-                                                    ? Colors.grey
-                                                    : null,
-                                              ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '$category • ${difficulty.toUpperCase()}',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: AppColors.lightTextSecondary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  StatusBadge(
-                                    label: status.toUpperCase().replaceAll(
-                                      '_',
-                                      ' ',
-                                    ),
-                                    status: badgeStatus,
-                                  ),
-                                ],
-                              ),
-                              if (description.isNotEmpty) ...[
-                                const SizedBox(height: 10),
-                                Text(
-                                  description,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isLocked
-                                        ? Colors.grey
-                                        : AppColors.lightTextSecondary,
-                                    height: 1.3,
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 14),
-
-                              // Mastery Progress Bar
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: LinearProgressIndicator(
-                                        value: mastery,
-                                        minHeight: 8,
-                                        backgroundColor: Colors.grey.withValues(
-                                          alpha: 0.15,
-                                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: () => _startSkillAssessment(node),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: isMastered
+                                          ? AppColors.success.withValues(
+                                              alpha: 0.1,
+                                            )
+                                          : AppColors.primary.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                      child: Icon(
+                                        isMastered
+                                            ? Icons.verified
+                                            : Icons.code,
                                         color: isMastered
                                             ? AppColors.success
-                                            : mastery < 0.60 && mastery > 0
-                                            ? AppColors.warning
                                             : AppColors.primary,
+                                        size: 20,
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            title,
+                                            style: AppTypography.titleMedium,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '$category • ${difficulty.toUpperCase()}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color:
+                                                  AppColors.lightTextSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    StatusBadge(
+                                      label: badgeLabel,
+                                      status: badgeStatus,
+                                    ),
+                                  ],
+                                ),
+                                if (description.isNotEmpty) ...[
+                                  const SizedBox(height: 10),
                                   Text(
-                                    '${(mastery * 100).toInt()}%',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: isMastered
-                                          ? AppColors.success
-                                          : null,
+                                    description,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.lightTextSecondary,
+                                      height: 1.3,
                                     ),
                                   ),
                                 ],
-                              ),
+                                const SizedBox(height: 14),
 
-                              if (prereqs.isNotEmpty) ...[
-                                const SizedBox(height: 10),
-                                Wrap(
-                                  spacing: 6,
-                                  runSpacing: 4,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                // Mastery Progress Bar
+                                Row(
                                   children: [
-                                    const Text(
-                                      'Requires:',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey,
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: LinearProgressIndicator(
+                                          value: mastery > 1.0 ? 1.0 : mastery,
+                                          minHeight: 8,
+                                          backgroundColor: Colors.grey
+                                              .withValues(alpha: 0.15),
+                                          color: isMastered
+                                              ? AppColors.success
+                                              : mastery < 0.60 && mastery > 0
+                                                  ? AppColors.warning
+                                                  : AppColors.primary,
+                                        ),
                                       ),
                                     ),
-                                    ...prereqs.map(
-                                      (p) => Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.withValues(
-                                            alpha: 0.1,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          p.toString(),
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            fontFamily: 'monospace',
-                                          ),
-                                        ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      '${(mastery * 100).toInt()}%',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: isMastered
+                                            ? AppColors.success
+                                            : null,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ],
 
-                              const SizedBox(height: 12),
-                              if (!isLocked)
+                                if (prereqs.isNotEmpty) ...[
+                                  const SizedBox(height: 10),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    children: [
+                                      const Text(
+                                        'Requires:',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      ...prereqs.map(
+                                        (p) => Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            p.toString(),
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              fontFamily: 'monospace',
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+
+                                const SizedBox(height: 12),
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: TextButton.icon(
                                     style: TextButton.styleFrom(
-                                      foregroundColor: AppColors.primary,
+                                      foregroundColor: isMastered
+                                          ? AppColors.success
+                                          : AppColors.primary,
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 12,
                                         vertical: 6,
                                       ),
                                     ),
-                                    icon: const Icon(
-                                      Icons.quiz_outlined,
+                                    icon: Icon(
+                                      isMastered
+                                          ? Icons.verified
+                                          : Icons.quiz_outlined,
                                       size: 16,
                                     ),
                                     label: Text(
                                       isMastered
                                           ? 'Retake Quiz'
-                                          : 'Diagnostic Check',
+                                          : 'Practice Quiz',
                                     ),
                                     onPressed: () =>
                                         _startSkillAssessment(node),
                                   ),
-                                )
-                              else
-                                const Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 4),
-                                    child: Text(
-                                      'Complete prerequisites to unlock',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontStyle: FontStyle.italic,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ),
                                 ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       );

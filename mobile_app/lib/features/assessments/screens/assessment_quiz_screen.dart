@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
@@ -12,11 +13,13 @@ import 'assessment_result_screen.dart';
 class AssessmentQuizScreen extends StatefulWidget {
   final int assessmentId;
   final String title;
+  final ApiClient? apiClient;
 
   const AssessmentQuizScreen({
     super.key,
     required this.assessmentId,
     required this.title,
+    this.apiClient,
   });
 
   @override
@@ -24,10 +27,11 @@ class AssessmentQuizScreen extends StatefulWidget {
 }
 
 class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> {
-  final _apiClient = ApiClient();
+  late final ApiClient _apiClient;
 
   bool _isLoading = true;
   bool _isSubmitting = false;
+  bool _hasSubmitted = false;
   String? _errorMessage;
 
   int? _attemptId;
@@ -42,13 +46,16 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> {
   @override
   void initState() {
     super.initState();
+    _apiClient = widget.apiClient ?? ApiClient();
     _startQuizSession();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    _apiClient.dispose();
+    if (widget.apiClient == null) {
+      _apiClient.dispose();
+    }
     super.dispose();
   }
 
@@ -97,13 +104,36 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> {
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
+  List<dynamic> _extractOptions(Map<String, dynamic> question) {
+    final raw = question['options'] ?? question['options_json'];
+    if (raw is List) {
+      return raw.where((item) => item != null).toList();
+    }
+    if (raw is String && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          return decoded.where((item) => item != null).toList();
+        }
+      } catch (_) {}
+      return raw
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    return const [];
+  }
+
   void _selectOption(int questionId, dynamic option) {
+    if (_isSubmitting || _hasSubmitted) return;
     setState(() {
       _selectedAnswers[questionId] = option;
     });
   }
 
   Future<void> _confirmAndSubmit() async {
+    if (_isSubmitting || _hasSubmitted || _attemptId == null) return;
     final unansweredCount = _questions.length - _selectedAnswers.length;
 
     final shouldSubmit = await showDialog<bool>(
@@ -134,7 +164,7 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> {
   }
 
   Future<void> _executeSubmit() async {
-    if (_attemptId == null) return;
+    if (_attemptId == null || _isSubmitting || _hasSubmitted) return;
 
     _timer?.cancel();
     setState(() {
@@ -146,6 +176,7 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> {
         final qId = q['id'] as int;
         return {
           'question_id': qId,
+          'selected_option': _selectedAnswers[qId],
           'learner_response_json': _selectedAnswers[qId],
           'time_spent_seconds': _timeSpentPerQuestion[qId] ?? 0,
         };
@@ -155,6 +186,7 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> {
         'responses': responses,
       });
 
+      _hasSubmitted = true;
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -233,10 +265,10 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> {
       );
     }
 
-    final currentQuestion = _questions[_currentIndex];
+    final currentQuestion = _questions[_currentIndex] as Map<String, dynamic>;
     final qId = currentQuestion['id'] as int;
     final prompt = currentQuestion['prompt'] as String? ?? '';
-    final options = (currentQuestion['options_json'] as List?) ?? [];
+    final options = _extractOptions(currentQuestion);
     final selected = _selectedAnswers[qId];
 
     return Scaffold(
@@ -300,9 +332,10 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Question ${_currentIndex + 1} of ${_questions.length}',
+                          'Question ${_currentIndex + 1} of ${_questions.length} • ${_selectedAnswers.length} answered',
                           style: AppTypography.titleMedium.copyWith(
                             color: AppColors.lightTextSecondary,
+                            fontSize: 13,
                           ),
                         ),
                         Text(
@@ -349,61 +382,103 @@ class _AssessmentQuizScreenState extends State<AssessmentQuizScreen> {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        ...options.map((opt) {
-                          final isSelected = selected == opt;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: InkWell(
-                              onTap: () => _selectOption(qId, opt),
+                        if (options.isEmpty)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.warning.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? AppColors.primary.withValues(
-                                          alpha: 0.08,
-                                        )
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? AppColors.primary
-                                        : Colors.grey.withValues(alpha: 0.3),
-                                    width: isSelected ? 2.0 : 1.0,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      isSelected
-                                          ? Icons.radio_button_checked
-                                          : Icons.radio_button_off,
-                                      color: isSelected
-                                          ? AppColors.primary
-                                          : Colors.grey,
-                                      size: 22,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        opt.toString(),
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: isSelected
-                                              ? FontWeight.w600
-                                              : FontWeight.normal,
-                                          color: isSelected
-                                              ? AppColors.primary
-                                              : null,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              border: Border.all(
+                                color: AppColors.warning.withValues(alpha: 0.4),
                               ),
                             ),
-                          );
-                        }),
+                            child: const Text(
+                              'No answer options were returned for this question. Please contact support or retry.',
+                            ),
+                          )
+                        else
+                          ...options.asMap().entries.map((entry) {
+                            final optIdx = entry.key;
+                            final opt = entry.value;
+                            final isSelected =
+                                selected != null &&
+                                selected.toString() == opt.toString();
+                            final letter = String.fromCharCode(65 + (optIdx % 26));
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => _selectOption(qId, opt),
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? AppColors.primary.withValues(
+                                              alpha: 0.12,
+                                            )
+                                          : AppColors.primary.withValues(
+                                              alpha: 0.02,
+                                            ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : Colors.grey.withValues(alpha: 0.35),
+                                        width: isSelected ? 2.0 : 1.0,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 14,
+                                          backgroundColor: isSelected
+                                              ? AppColors.primary
+                                              : Colors.grey.withValues(alpha: 0.18),
+                                          child: Text(
+                                            letter,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : AppColors.lightTextPrimary,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            opt.toString(),
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.w600
+                                                  : FontWeight.normal,
+                                              color: isSelected
+                                                  ? AppColors.primary
+                                                  : null,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Icon(
+                                          isSelected
+                                              ? Icons.check_circle
+                                              : Icons.radio_button_off,
+                                          color: isSelected
+                                              ? AppColors.primary
+                                              : Colors.grey,
+                                          size: 22,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
                       ],
                     ),
                   ),

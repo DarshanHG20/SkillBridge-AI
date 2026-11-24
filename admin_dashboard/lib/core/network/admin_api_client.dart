@@ -274,9 +274,12 @@ class AdminApiClient {
       'skip': skip.toString(),
       'limit': limit.toString(),
     };
-    if (action != null && action.isNotEmpty) queryParams['action'] = action;
-    if (entityType != null && entityType.isNotEmpty)
+    if (action != null && action.isNotEmpty) {
+      queryParams['action'] = action;
+    }
+    if (entityType != null && entityType.isNotEmpty) {
       queryParams['entity_type'] = entityType;
+    }
 
     final uri = Uri.parse('$_baseUrl/admin/audit-logs')
         .replace(queryParameters: queryParams);
@@ -301,9 +304,12 @@ class AdminApiClient {
       'skip': skip.toString(),
       'limit': limit.toString(),
     };
-    if (category != null && category.isNotEmpty)
+    if (category != null && category.isNotEmpty) {
       queryParams['category'] = category;
-    if (status != null && status.isNotEmpty) queryParams['status'] = status;
+    }
+    if (status != null && status.isNotEmpty) {
+      queryParams['status'] = status;
+    }
 
     final uri = Uri.parse('$_baseUrl/admin/feedback')
         .replace(queryParameters: queryParams);
@@ -347,6 +353,220 @@ class AdminApiClient {
             uri,
             headers: _buildHeaders(),
             body: jsonEncode({'role': role}),
+          )
+          .timeout(const Duration(seconds: 15));
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Export CSV...
+  /// Check backend service health.
+  Future<Map<String, dynamic>> checkHealth() async {
+    final uri = Uri.parse('$_baseUrl/health');
+    try {
+      final response = await _client
+          .get(uri, headers: _buildHeaders())
+          .timeout(const Duration(seconds: 10));
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Create a new curriculum skill node.
+  Future<Map<String, dynamic>> createSkill(Map<String, dynamic> payload) async {
+    final uri = Uri.parse('$_baseUrl/admin/skills');
+    try {
+      final response = await _client
+          .post(uri, headers: _buildHeaders(), body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 15));
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Delete a skill node.
+  Future<void> deleteSkill(int skillId) async {
+    final uri = Uri.parse('$_baseUrl/admin/skills/$skillId');
+    try {
+      final response = await _client
+          .delete(uri, headers: _buildHeaders())
+          .timeout(const Duration(seconds: 15));
+      _processResponse(response);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Create an assessment.
+  Future<Map<String, dynamic>> createAssessment(
+    Map<String, dynamic> payload,
+  ) async {
+    final uri = Uri.parse('$_baseUrl/admin/assessments');
+    try {
+      final response = await _client
+          .post(uri, headers: _buildHeaders(), body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 15));
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Delete an assessment and its questions.
+  Future<void> deleteAssessment(int assessmentId) async {
+    final uri = Uri.parse('$_baseUrl/admin/assessments/$assessmentId');
+    try {
+      final response = await _client
+          .delete(uri, headers: _buildHeaders())
+          .timeout(const Duration(seconds: 15));
+      _processResponse(response);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Add a question to an assessment.
+  Future<Map<String, dynamic>> addQuestion(
+    int assessmentId,
+    Map<String, dynamic> payload,
+  ) async {
+    final uri = Uri.parse('$_baseUrl/admin/assessments/$assessmentId/questions');
+    try {
+      final response = await _client
+          .post(uri, headers: _buildHeaders(), body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 15));
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// List all career pathways.
+  Future<List<dynamic>> listCareers() async {
+    final uri = Uri.parse('$_baseUrl/careers');
+    try {
+      final response = await _client
+          .get(uri, headers: _buildHeaders())
+          .timeout(const Duration(seconds: 15));
+      final data = _processResponse(response);
+      if (data is List) return data;
+      if (data is Map<String, dynamic>) {
+        return (data['items'] ?? data['careers'] ?? []) as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Create a career pathway.
+  Future<Map<String, dynamic>> createCareer(
+    Map<String, dynamic> payload,
+  ) async {
+    final uri = Uri.parse('$_baseUrl/admin/careers');
+    try {
+      final response = await _client
+          .post(uri, headers: _buildHeaders(), body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 15));
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Delete a career pathway.
+  Future<void> deleteCareer(int careerId) async {
+    final uri = Uri.parse('$_baseUrl/admin/careers/$careerId');
+    try {
+      final response = await _client
+          .delete(uri, headers: _buildHeaders())
+          .timeout(const Duration(seconds: 15));
+      _processResponse(response);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// List all capstone project templates.
+  Future<List<dynamic>> listProjects() async {
+    final uri = Uri.parse('$_baseUrl/projects');
+    try {
+      final response = await _client
+          .get(uri, headers: _buildHeaders())
+          .timeout(const Duration(seconds: 15));
+      final data = _processResponse(response);
+      if (data is List) return data;
+      if (data is Map<String, dynamic>) {
+        return (data['items'] ?? data['projects'] ?? []) as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Create a capstone project template.
+  Future<Map<String, dynamic>> createProject(
+    Map<String, dynamic> payload,
+  ) async {
+    final uri = Uri.parse('$_baseUrl/admin/projects');
+    try {
+      final response = await _client
+          .post(uri, headers: _buildHeaders(), body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 15));
+      return _processResponse(response) as Map<String, dynamic>;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Delete a capstone project template.
+  Future<void> deleteProject(int projectId) async {
+    final uri = Uri.parse('$_baseUrl/admin/projects/$projectId');
+    try {
+      final response = await _client
+          .delete(uri, headers: _buildHeaders())
+          .timeout(const Duration(seconds: 15));
+      _processResponse(response);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// List ALL RAG documents (both approved and pending approval) for admin moderation.
+  Future<List<dynamic>> listAllAdminDocuments() async {
+    final uri = Uri.parse('$_baseUrl/admin/documents');
+    try {
+      final response = await _client
+          .get(uri, headers: _buildHeaders())
+          .timeout(const Duration(seconds: 15));
+      final data = _processResponse(response);
+      if (data is List) return data;
+      if (data is Map<String, dynamic>) {
+        return (data['items'] ?? data['documents'] ?? []) as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Approve or revoke approval on a knowledge base document.
+  Future<Map<String, dynamic>> setDocumentApproval(
+    int documentId,
+    bool isApproved,
+  ) async {
+    final uri = Uri.parse('$_baseUrl/admin/documents/$documentId/approval');
+    try {
+      final response = await _client
+          .patch(
+            uri,
+            headers: _buildHeaders(),
+            body: jsonEncode({'is_approved': isApproved}),
           )
           .timeout(const Duration(seconds: 15));
       return _processResponse(response) as Map<String, dynamic>;

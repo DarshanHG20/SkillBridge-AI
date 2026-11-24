@@ -2,21 +2,21 @@
 
 > **Adaptive AI Learning Platform for Students, Job Seekers, and Lifelong Learners.**
 
-SkillBridge AI is a full-stack, enterprise-grade educational technology platform engineered to bridge skill gaps through dynamic, personalized learning paths. Unlike static curriculum platforms, SkillBridge AI features a **hybrid adaptive AI engine** (combining deterministic rules, machine learning mastery modeling, and retrieval-augmented reasoning) to continuously assess student competency, diagnose knowledge gaps, navigate skill dependency graphs, and calibrate learning activities to each learner's unique pace and goals.
+SkillBridge AI is a full-stack, enterprise-grade educational technology platform engineered to bridge skill gaps through dynamic, personalized learning paths. The platform combines deterministic pedagogical rules, Bayesian mastery tracking, and retrieval-augmented reasoning (RAG) to continuously assess competency, navigate curriculum dependency graphs, and calibrate learning activities.
 
 ---
 
-## 🌟 Core Platform Features
+## 🛠️ Technology Stack
 
-- **Dynamic Skill Mastery Graph**: Models prerequisites, dependencies, and mastery thresholds as a directed acyclic graph (DAG) across Python, Java, SQL, DSA, Web Dev, Data Science, AI/ML, Networking, and Cybersecurity.
-- **Adaptive Diagnostic Assessment Engine**: Server-side scoring evaluating question attempts with exponential moving average (EMA) mastery updates, diagnosing root misconceptions rather than binary right/wrong scoring.
-- **Career Intelligence & Dynamic Roadmaps**: Target career pathway gap analysis with automated generation of 30, 60, and 90-day learning roadmaps.
-- **Project-Based Learning**: Hands-on project templates with rubrics, milestone checklists, and portfolio progress tracking.
-- **Provider-Independent AI Tutor**: Plug-and-play LLM adapter supporting Gemini, OpenAI, Claude, or a zero-cost deterministic fallback with per-user daily rate limits.
-- **RAG Educational Document Pipeline**: Safe PDF/text ingestion, sliding-window chunking, TF-IDF vector retrieval, and prompt injection defense.
-- **Safe Coding Sandbox**: Sandboxed code execution supporting Python, JavaScript, and Java with time limit and resource guards.
-- **Admin Management Console (Flutter Web)**: Comprehensive management of user accounts, role elevation, skill taxonomies, assessment banks, career pathways, project templates, RAG document approval, student feedback review, verified learning analytics, and CSV report export.
-- **Learner Mobile App (Flutter Android)**: Native-performance Android app with Material Design 3, adaptive dashboards, quiz engine, AI tutor chat, and direct APK sideloading distribution.
+| Layer | Technologies |
+| :--- | :--- |
+| **Backend API** | Node.js 18+, Express, JWT Auth (HS256), Bcrypt (12 rounds), CORS, Helmet |
+| **Database & ODM** | MongoDB, Mongoose 8.x (with zero-dependency in-memory MongoMemoryServer dev fallback) |
+| **Web Frontend** | React 18+, Vite, Vanilla CSS Design System, Dark Mode & Glassmorphism |
+| **Learner Mobile App** | Flutter 3.47+ / Dart 3.13+, Material Design 3, Android APK & Web |
+| **Admin Web Console** | Flutter Web / React Admin Console, Material Design 3 |
+| **AI, RAG & Sandbox** | Multi-provider LLM adapter (Gemini, OpenAI, Deterministic Fallback), TF-IDF RAG, AST + Node VM sandbox |
+| **Preserved Reference** | Python 3.10+, FastAPI, SQLAlchemy 2.0, Alembic, SQLite/MySQL |
 
 ---
 
@@ -25,181 +25,220 @@ SkillBridge AI is a full-stack, enterprise-grade educational technology platform
 ```text
 nagmamobileApp/
 ├── .env.example              # Development environment template
-├── .gitignore                # Centralized Git ignore rules
-├── docker-compose.prod.yml   # Production Docker Compose orchestration
-├── README.md                 # Complete system guide & checklist
-├── docs/                     # Architectural & operational guides
-│   ├── architecture.md       # High-level architecture & diagrams
-│   ├── database_design.md    # Normalized schema specification (20+ tables)
-│   ├── environments.md       # Dev, Staging, and Production environment guide
-│   ├── PRODUCTION_DEPLOYMENT.md # Online backend & MySQL deployment runbook
-│   └── ANDROID_APK_DISTRIBUTION.md # Direct release APK build & sideloading
-├── backend/                  # Python FastAPI Backend service
-│   ├── Dockerfile            # Multi-stage production container
-│   ├── .env.production.example # Production environment template
-│   ├── alembic.ini           # Database migration configuration
-│   ├── requirements.txt      # Python dependencies
-│   ├── pyproject.toml        # Backend project metadata & tools
-│   ├── app/
-│   │   ├── main.py           # FastAPI entrypoint, middleware, lifespan
-│   │   ├── core/             # Settings, DB session, security, password hashing
-│   │   ├── api/v1/           # Versioned API router & endpoints (/api/v1)
-│   │   ├── models/           # SQLAlchemy 2.0 DeclarativeBase ORM models
-│   │   ├── schemas/          # Pydantic v2 request/response schemas
-│   │   ├── adaptive/         # Exponential moving average mastery engine
-│   │   ├── tutor/            # Multi-provider LLM adapter & deterministic fallback
-│   │   ├── rag/              # Document extraction, chunking, and TF-IDF search
-│   │   ├── coding/           # Safe multi-language coding practice engine
-│   │   ├── services/         # Verified analytics & CSV generation services
-│   │   └── cli/              # Admin provisioning CLI scripts
-│   ├── migrations/           # Alembic schema version revisions
-│   └── tests/                # 73 automated Pytest unit and integration tests
-├── mobile_app/               # Flutter Android mobile client
-│   ├── pubspec.yaml          # Flutter dependencies and assets
+├── MIGRATION_PLAN.md         # Comprehensive architectural migration strategy
+├── FEATURE_PARITY.md         # 100% Feature-by-feature verification checklist
+├── API_MIGRATION_MAP.md      # Exact endpoint contract mapping & schemas
+├── docs/
+│   └── NOTIFICATION_FEATURE_AUDIT.md # Complete notification system audit & setup guide
+├── backend-node/             # Target Node.js + Express + Mongoose Backend
+│   ├── src/
+│   │   ├── config/           # Centralized configuration & DB connector
+│   │   ├── models/           # Mongoose schemas (Auto-increment integer ID support)
+│   │   ├── middleware/       # JWT auth, RBAC guard, rate-limiting, error handler
+│   │   ├── services/         # Adaptive mastery, RAG, AST coding sandbox, AI adapter
+│   │   ├── controllers/      # API controller endpoints
+│   │   └── routes/           # Versioned API routes (/api/v1)
+│   ├── scripts/              # Safe SQL-to-Mongo migration & MongoDB seed scripts
+│   └── tests/                # Jest integration test suite (24/24 passing)
+├── frontend/                 # React 18+ Vite Web SPA (Learner & Admin console)
+│   ├── src/
+│   │   ├── components/       # Glassmorphic UI components, Navbar, Footer, StatusBadge
+│   │   ├── context/          # Auth context with session restoration
+│   │   ├── pages/            # 10 comprehensive learner and admin views
+│   │   └── services/         # Typed API client for all subsystems
+│   └── dist/                 # Production-optimized Vite bundle
+├── mobile_app/               # Flutter Android mobile client (12/12 tests passing)
 │   ├── lib/                  # Clean architecture (core, features, shared)
-│   └── test/                 # 12 automated Flutter widget & unit tests
-├── admin_dashboard/          # Flutter Web admin management console
-│   ├── pubspec.yaml          # Flutter Web dependencies
+│   └── test/                 # Automated Flutter unit & widget tests
+├── admin_dashboard/          # Flutter Web admin console (7/7 tests passing)
 │   ├── lib/                  # Admin layout, analytics, feedback, taxonomy
-│   └── test/                 # 7 automated Flutter Web widget tests
+│   └── test/                 # Automated Flutter Web widget tests
+├── backend/                  # Preserved Python FastAPI Backend (73/73 tests passing)
+│   ├── app/                  # FastAPI routers, models, schemas, services
+│   ├── skillbridge_dev.db    # Preserved SQLite database
+│   └── tests/                # Pytest suite
 └── database/                 # Schema definitions, seed scripts, SQL migrations
-    ├── backup_mysql.ps1      # PowerShell automated database backup script
-    └── restore_mysql.ps1     # PowerShell automated database restore script
 ```
 
 ---
 
-## 🛠️ Technology Stack
+## ⚡ Quickstart Guide (Windows PowerShell)
 
-| Layer | Technologies |
-| :--- | :--- |
-| **Mobile App (Android)** | Flutter 3.47+ / Dart 3.13+, Material Design 3, Direct APK Distribution |
-| **Admin Dashboard (Web)** | Flutter Web, Material Design 3, Responsive Desktop Layout |
-| **Backend API** | Python 3.10+, FastAPI, Uvicorn (ASGI) |
-| **Data Validation** | Pydantic v2 & Pydantic-Settings |
-| **Database & ORM** | MySQL 8.0+ / SQLite (local dev), SQLAlchemy 2.0, Alembic |
-| **AI, RAG & Sandbox** | Scikit-learn (TF-IDF vector indexing), PyPDF, Multi-provider LLM adapter |
-| **Testing** | Pytest (73 tests), HTTPX TestClient, Flutter Test (19 tests) |
+### Prerequisites
+- **Node.js**: v18.0.0 or higher
+- **npm**: v9.0.0 or higher
+- **Flutter SDK**: v3.47.0 or higher
+- **Python**: v3.10+ (for preserved backend reference)
 
 ---
 
-## ⚡ Quickstart Guide (Local Development)
+### 1. Node.js + Express Backend (`backend-node`)
 
-### 1. Backend Setup (Windows PowerShell)
+The backend connects to an external MongoDB service if configured in `.env`, or automatically launches an in-memory `MongoMemoryServer` if no external database is active.
 
 ```powershell
-# Navigate to backend directory
-cd c:\nagmamobileApp\backend
+cd c:\nagmamobileApp\backend-node
 
-# Activate virtual environment
-.\venv\Scripts\Activate.ps1
+# 1. Install dependencies
+npm install
 
-# Install dependencies
-pip install -r requirements.txt
+# 2. (Optional) Run SQL-to-MongoDB data migration:
+# Dry-run validation (no database writes):
+node scripts/migrate_sql_to_mongo.js --dry-run
+# Live migration:
+node scripts/migrate_sql_to_mongo.js
 
-# Run database migrations
-alembic upgrade head
+# 3. Seed MongoDB with demo accounts & knowledge docs:
+node scripts/seed_mongo.js
 
-# Provision initial administrator account
-python -m app.cli.create_admin --email admin@skillbridge.ai --password "<YOUR_ADMIN_PASSWORD>" --name "Lead Administrator"
+# 4. Run automated test suite:
+npm test
 
-# Start the FastAPI server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# 5. Start development server on port 5001:
+npm run dev
 ```
 
-- **Interactive API Documentation (Swagger)**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Health Check**: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
+- **Health Check**: [http://localhost:5001/api/v1/health](http://localhost:5001/api/v1/health)
+- **API Base**: [http://localhost:5001/api/v1](http://localhost:5001/api/v1)
 
 ---
 
-### 2. Admin Web Console Setup (Flutter Web)
+### 2. React Web Application (`frontend`)
 
 ```powershell
-# In a new PowerShell window:
-cd c:\nagmamobileApp\admin_dashboard
-flutter pub get
-flutter run -d chrome --web-port=3000
+cd c:\nagmamobileApp\frontend
+
+# 1. Install dependencies
+npm install
+
+# 2. Build production bundle (validates zero compilation errors):
+npm run build
+
+# 3. Start development server:
+npm run dev
 ```
-**Admin Login:** Use the administrator credentials configured for your local development environment. Never commit real passwords or API keys to GitHub.
+
+- **Web App**: [http://localhost:5173](http://localhost:5173)
+- **Default Seed Accounts**:
+  - **Student Account**: `student@skillbridge.ai` / `Student@123456`
+  - **Administrator Account**: `admin@skillbridge.ai` / `Admin@123456`
 
 ---
 
-### 3. Student Mobile App Setup (Flutter Android)
+### 3. Flutter Learner Mobile App (`mobile_app`)
 
+Configure the API base URL appropriately for your target testing environment:
+
+#### A. Web Browser Preview (Fastest)
 ```powershell
-# In a new PowerShell window:
 cd c:\nagmamobileApp\mobile_app
 flutter pub get
-# Run in Chrome for fast local preview:
 flutter run -d chrome --web-port=3001
-# Or run on connected Android phone / emulator:
+```
+
+#### B. Android Emulator
+```powershell
+# Standard Android emulator uses 10.0.2.2 to loopback to host localhost
 flutter run -d android
 ```
 
+#### C. Physical Android Phone via USB / Wi-Fi
+```powershell
+# Replace 192.168.1.X with your computer's local LAN IP address:
+flutter run -d <DEVICE_ID> --dart-define=API_BASE_URL=http://192.168.1.50:5001/api/v1
+```
+
+#### D. Build Debug / Release APK
+```powershell
+flutter build apk --debug
+# Generated APK: mobile_app/build/app/outputs/flutter-apk/app-debug.apk
+```
+
 ---
 
-## 🧪 Automated Testing Suite
-
-All tests can be executed locally without external dependencies:
+### 4. Flutter Admin Dashboard (`admin_dashboard`)
 
 ```powershell
-# 1. Backend Pytest Suite (73 tests)
-cd c:\nagmamobileApp\backend
-.\venv\Scripts\pytest -v
+cd c:\nagmamobileApp\admin_dashboard
+flutter pub get
+flutter run -d chrome --web-port=8080
+```
 
-# 2. Admin Dashboard Flutter Tests (7 tests) & Static Analysis
+Or build production web bundle:
+```powershell
+flutter build web
+# Generated assets: admin_dashboard/build/web
+```
+
+---
+
+### 5. Preserved Python FastAPI Backend (`backend`)
+
+```powershell
+cd c:\nagmamobileApp\backend
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+- **Swagger Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Pytest Suite (73 tests)**: `.\venv\Scripts\pytest -q`
+
+---
+
+## 🧪 Complete Test Suite Verification
+
+Every automated test suite and build command can be run locally:
+
+```powershell
+# 1. Node.js Express Backend (24 integration tests)
+cd c:\nagmamobileApp\backend-node
+npm test
+
+# 2. React Web Application (Vite production bundle build)
+cd c:\nagmamobileApp\frontend
+npm run build
+
+# 3. Flutter Mobile Learner App (Static analysis + 12 widget/unit tests)
+cd c:\nagmamobileApp\mobile_app
+flutter analyze
+flutter test
+
+# 4. Flutter Admin Dashboard (Static analysis + 7 widget/unit tests + Web build)
 cd c:\nagmamobileApp\admin_dashboard
 flutter analyze
 flutter test
+flutter build web
 
-# 3. Mobile App Flutter Tests (12 tests) & Static Analysis
-cd c:\nagmamobileApp\mobile_app
-flutter analyze
-flutter test
+# 5. Legacy Python FastAPI Backend (73 unit & integration tests)
+cd c:\nagmamobileApp\backend
+.\venv\Scripts\pytest -q
 ```
 
 ---
 
-## 📦 Android Release APK Build & Direct Distribution
+## 🤖 AI Provider & Fallback Configuration
 
-Build the production signed APK without Google Play Store requirements:
+The platform features a plug-and-play AI adapter architecture in [backend-node/src/services/aiAdapter.js](file:///c:/nagmamobileApp/backend-node/src/services/aiAdapter.js):
 
-```powershell
-cd c:\nagmamobileApp\mobile_app
-flutter build apk --release --dart-define=API_BASE_URL=https://api.yourdomain.com/api/v1
-```
-
-- **Generated APK**: `mobile_app/build/app/outputs/flutter-apk/app-release.apk`
-- **Sideload to Test Phone via USB**:
-  ```powershell
-  adb install -r build\app\outputs\flutter-apk\app-release.apk
+- **Deterministic Fallback (Default - Zero Cost)**:
+  When `AI_PROVIDER=none` or when API keys are not supplied, the platform runs on its verified rule-based pedagogical Socratic engine. No external network requests are made, ensuring complete offline functionality and zero API billing.
+- **Google Gemini Integration**:
+  To enable Gemini, set the following in `backend-node/.env`:
+  ```ini
+  AI_PROVIDER=gemini
+  GEMINI_API_KEY=your_gemini_api_key_here
+  GEMINI_MODEL=gemini-1.5-flash
   ```
-- Detailed signing, keystore protection, and trusted hosting instructions: [docs/ANDROID_APK_DISTRIBUTION.md](file:///c:/nagmamobileApp/docs/ANDROID_APK_DISTRIBUTION.md).
-
----
-
-## 🌐 Production Deployment Guide
-
-Deploy using Docker Compose or standalone Linux services:
-```bash
-docker compose -f docker-compose.prod.yml up -d --build
-```
-Comprehensive production guides covering Nginx reverse proxy, Let's Encrypt SSL, managed MySQL configuration, backup cron jobs, and rate limit adjustments: [docs/PRODUCTION_DEPLOYMENT.md](file:///c:/nagmamobileApp/docs/PRODUCTION_DEPLOYMENT.md).
-
----
-
-## 📱 Real Android Device Manual Testing Checklist
-
-| # | Step | Verification Action | Expected Result |
-| :--- | :--- | :--- | :--- |
-| 1 | **Installation** | Sideload `app-release.apk` onto Android phone | App installs cleanly; opens with Splash screen |
-| 2 | **Registration** | Register a new learner account | Account created; JWT tokens stored securely |
-| 3 | **Diagnostics** | Go to Settings -> Network Connectivity | Green "Connection OK" health status displayed |
-| 4 | **Adaptive Assessment** | Launch Diagnostic Quiz and submit answers | Server scores quiz; mastery score updates; explanations shown |
-| 5 | **Roadmap Generation** | Select a target career (e.g. Backend Engineer) | 30/60/90-day personalized milestone roadmap generated |
-| 6 | **AI Tutor / Chat** | Send question to AI Tutor (e.g. "What is recursion?") | Contextual answer or deterministic fallback response returned |
-| 7 | **Knowledge Search** | Query RAG Knowledge base | Citations and evidence snippets returned with confidence score |
-| 8 | **Coding Sandbox** | Submit Python function solution | Evaluated against test cases; feedback returned |
-| 9 | **Feedback Submission** | In Settings -> Submit Bug Report | Feedback saved to database with `pending` status |
-| 10 | **Admin Verification** | Open Admin Web console (`/feedback`) | Submitted bug report appears; admin can review and mark `resolved` |
-| 11 | **Export CSV** | In Admin Web console (`/analytics`) | Download Users, Attempts, and Audit Logs CSV files |
+- **OpenAI Integration**:
+  To enable OpenAI, set the following in `backend-node/.env`:
+  ```ini
+  AI_PROVIDER=openai
+  OPENAI_API_KEY=your_openai_api_key_here
+  OPENAI_MODEL=gpt-4o-mini
+  ```
+- **RAG Knowledge Pipeline**:
+  Upload curriculum documents in PDF, Markdown, or TXT format. Approved documents are automatically chunked with sliding windows and indexed for TF-IDF cosine similarity vector retrieval with source citations.
+- **Safe Code Execution Sandbox**:
+  Untrusted learner code is checked via static AST security scanning (rejecting `os`, `sys`, `subprocess`, `eval`, `exec`) and executed within isolated Node `vm` sandboxes guarded by a strict 1000ms CPU execution timeout.
