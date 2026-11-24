@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -27,26 +28,37 @@ import notificationRoutes from './routes/notificationRoutes.js';
 
 const app = express();
 
+// Render reverse proxy configuration
+app.set('trust proxy', 1);
+
 // Security & Logging Middlewares
 app.use(helmet({ crossOriginResourcePolicy: false }));
+
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (e.g. mobile apps, curl, native clients)
       if (!origin) return callback(null, true);
-      if (config.corsOrigins.includes(origin) || config.corsOrigins.includes('*')) {
+
+      if (
+        config.corsOrigins.includes(origin) ||
+        config.corsOrigins.includes('*')
+      ) {
         return callback(null, true);
       }
-      // In development / test environments allow any localhost, loopback, or private LAN dev origin
+
+      // Allow development origins
       if (config.environment !== 'production') {
         return callback(null, true);
       }
-      // Production fallback for explicit private subnet patterns
+
+      // Production fallback for private subnet patterns
       if (
         /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/i.test(origin)
       ) {
         return callback(null, true);
       }
+
       return callback(null, false);
     },
     credentials: true,
@@ -76,6 +88,7 @@ app.get('/', (req, res) => {
 
 // Mount V1 API Routers
 const v1 = express.Router();
+
 v1.use('', healthRoutes);
 v1.use('/auth', authRoutes);
 v1.use('/users', userRoutes);
